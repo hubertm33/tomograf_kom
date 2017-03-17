@@ -75,13 +75,13 @@ def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
             tab2.append(tab)
     return tab2
 
-img = Image.open('Kolo.jpg').convert('L')
+img = Image.open('Kwadraty2.png').convert('L')
 
 start = 0
 
-alfa = np.pi/36
+alfa = 2*np.pi/4
 beta = np.pi/2
-n_odbiornikow = 50
+n_odbiornikow = 10
 height, width = img.size
 x0 = width/2
 y0 = height/2
@@ -99,8 +99,8 @@ tab_list = []
 list_of_nadajnik = []
 while (start < np.pi*2):
     """nadajnik"""
-    x1 = x0 + r* np.sin(start)
-    y1 = y0 + r* np.cos(start)
+    x1 = x0 + r* np.cos(start)
+    y1 = y0 + r* np.sin(start)
 
 
     c1 = plt.Circle((x1,y1), 5, color=(1, 0, 0))
@@ -108,8 +108,8 @@ while (start < np.pi*2):
     """odbiornik"""
 
     for i in range(0,n_odbiornikow):
-        x2 =  (x0 + r * np.sin((np.pi - (beta/2)) + start +((beta/n_odbiornikow)*i)))
-        y2 =  (y0 + r * np.cos((np.pi - (beta/2)) + start +((beta/n_odbiornikow)*i)))
+        x2 =  (x0 + r * np.cos((np.pi - (beta/2)) + start +((beta/(n_odbiornikow-1))*i)))
+        y2 =  (y0 + r * np.sin((np.pi - (beta/2)) + start +((beta/(n_odbiornikow-1))*i)))
         c2 = plt.Circle((x2, y2), 5, color=(0, 1, 0))
         fig.add_subplot(131).add_artist(c2)
         line = get_line((x1,y1),(x2,y2))
