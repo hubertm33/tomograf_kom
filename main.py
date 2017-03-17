@@ -57,31 +57,30 @@ def get_line(start, end):
     return points
 """co trzecia poczawszy od 0 potem 1 potem 2 pozycji"""
 def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
-    n = n_odbiornikoww
+    n_odbiornikoww
     suma = 0
     tab = []
     tab2 = []
-    listoflists = listoflist[0]
-    for i in range(0,len(listoflists)):
-        n = n - 1
-        for point in listoflists[i]:
-            x,y = point
-            RGB = img.getpixel((x,y))
-            suma = suma+RGB
-        tab.append((suma / len(listoflists[i]))/255)
-        suma = 0
-        if(n==0):
-            n = n_odbiornikoww
-            tab2.append(tab)
+
+    for lines_nadajnik in listoflist:
+        for line in lines_nadajnik:
+            for point in line:
+                x,y = point
+                RGB = img.getpixel((x,y))
+                suma = suma+RGB
+            tab.append((suma / len(line))/255)
+            suma = 0
+        tab2.append(tab)
+        tab = []
     return tab2
 
-img = Image.open('Kwadraty2.png').convert('L')
+img = Image.open('Paski2.jpg').convert('L')
 
 start = 0
 
-alfa = 2*np.pi/4
-beta = np.pi/2
-n_odbiornikow = 10
+alfa = 2*np.pi/72
+beta = np.pi/6
+n_odbiornikow = 9
 height, width = img.size
 x0 = width/2
 y0 = height/2
@@ -94,9 +93,11 @@ ax1 = fig.add_subplot(1, 3, 1)
 
 ax1.imshow(img,cmap=plt.cm.gray)
 
-ile = 0
+n_nadajnikow = 0
 tab_list = []
 list_of_nadajnik = []
+
+
 while (start < np.pi*2):
     """nadajnik"""
     x1 = x0 + r* np.cos(start)
@@ -115,16 +116,26 @@ while (start < np.pi*2):
         line = get_line((x1,y1),(x2,y2))
         tab_list.append(line)
     start+=alfa
+    n_nadajnikow = n_nadajnikow + 1
     list_of_nadajnik.append(tab_list)
+    tab_list = []
 
 print(len(list_of_nadajnik))
 
 tab_pixel = []
 tab_pixel = sumowanie_pixel_proste(list_of_nadajnik,img,n_odbiornikow)
+"""
+w, h = n_nadajnikow, n_odbiornikow;
+Matrix = [[0 for x in range(w)] for y in range(h)]
+
+matrix = {}
+for i in range(0,n_nadajnikow):
+    for j in range(0,n_odbiornikow):
+    matrix[i,j] = tab_pixel[i][j]"""
 
 ax1 = fig.add_subplot(1, 3, 2)
 
-ax1.imshow(tab_pixel, cmap=plt.get_cmap('gray'), vmin=0, vmax=1, aspect='auto')
+ax1.imshow(tab_pixel, cmap=plt.get_cmap('gray'), vmin=0, vmax=1)
 
 plt.show()
 
