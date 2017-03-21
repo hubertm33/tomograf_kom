@@ -77,12 +77,12 @@ def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
         tab = []
     return tab2
 
-img = Image.open('Kwadraty2.png').convert('L')
+img = Image.open('aaa.png').convert('L')
 
 start = 0
 
 alfa = 2*np.pi/360
-beta = np.pi * (5/6)
+beta = np.pi
 n_odbiornikow = 89
 height, width = img.size
 x0 = width/2
@@ -101,7 +101,7 @@ tab_list = []
 list_of_nadajnik = []
 
 
-while (start < 2*np.pi):
+while (start < 2*np.pi - (alfa / 2)):
     """nadajnik"""
     x1 = x0 + r* np.cos(start)
     y1 = y0 + r* np.sin(start)
@@ -127,14 +127,6 @@ print(len(list_of_nadajnik))
 
 tab_pixel = []
 tab_pixel = sumowanie_pixel_proste(list_of_nadajnik,img,n_odbiornikow)
-"""
-w, h = n_nadajnikow, n_odbiornikow;
-Matrix = [[0 for x in range(w)] for y in range(h)]
-
-matrix = {}
-for i in range(0,n_nadajnikow):
-    for j in range(0,n_odbiornikow):
-    matrix[i,j] = tab_pixel[i][j]"""
 
 ax1 = fig.add_subplot(1, 3, 2)
 
@@ -142,6 +134,20 @@ ax1.imshow(tab_pixel, cmap=plt.get_cmap('gray'), vmin=0, vmax=1, aspect='auto')
 
 
 ax1=fig.add_subplot(1,3,3)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 mat = []
 for i in range(width):
