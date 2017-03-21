@@ -55,6 +55,9 @@ def get_line(start, end):
     if swapped:
         points.reverse()
     return points
+
+
+
 """co trzecia poczawszy od 0 potem 1 potem 2 pozycji"""
 def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
     n_odbiornikoww
@@ -74,13 +77,13 @@ def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
         tab = []
     return tab2
 
-img = Image.open('obraz.png').convert('L')
+img = Image.open('Kwadraty2.png').convert('L')
 
 start = 0
 
-alfa = 2*np.pi/180
-beta = np.pi/6
-n_odbiornikow = 50
+alfa = 2*np.pi/360
+beta = np.pi * (5/6)
+n_odbiornikow = 89
 height, width = img.size
 x0 = width/2
 y0 = height/2
@@ -155,15 +158,27 @@ for lines_nadajnik in list_of_nadajnik:
     for line in lines_nadajnik:
         for point in line:
             x,y = point
-            mat[x][y] = mat[x][y] + wartosci_nadajnika[j]
+            mat[y][x] = mat[y][x] + wartosci_nadajnika[j]
         j = j + 1
     j = 0
     i = i + 1
-    if (i == 4):
+    if (i == n_nadajnikow):
         break
     wartosci_nadajnika = tab_pixel[i]
 
-ax1.imshow(mat, cmap=plt.get_cmap('gray'))
+
+max = 0
+for i in range(width):
+    for j in range(height):
+        if mat[i][j] > max:
+            max = mat[i][j]
+
+for i in range(width):
+    for j in range(height):
+        mat[i][j] = mat[i][j] / max
+
+
+ax1.imshow(mat, cmap=plt.get_cmap('gray'), vmax=1,vmin=0)
 
 plt.show()
 
