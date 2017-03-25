@@ -6,6 +6,57 @@ import scipy.misc
 
 import cv2
 
+
+import dicom, dicom.UID
+from dicom.dataset import Dataset, FileDataset
+import numpy as np
+import datetime, time
+
+def write_dicom(pixel_array,filename):
+    """
+    INPUTS:
+    pixel_array: 2D numpy ndarray.  If pixel_array is larger than 2D, errors.
+    filename: string name for the output file.
+    """
+
+    ## This code block was taken from the output of a MATLAB secondary
+    ## capture.  I do not know what the long dotted UIDs mean, but
+    ## this code works.
+    file_meta = Dataset()
+    file_meta.MediaStorageSOPClassUID = 'Secondary Capture Image Storage'
+    file_meta.MediaStorageSOPInstanceUID = '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
+    file_meta.ImplementationClassUID = '1.3.6.1.4.1.9590.100.1.0.100.4.0'
+    ds = FileDataset(filename, {},file_meta = file_meta,preamble="\0"*128)
+    ds.Modality = 'WSD'
+    ds.ContentDate = str(datetime.date.today()).replace('-','')
+    ds.ContentTime = str(time.time()) #milliseconds since the epoch
+    ds.StudyInstanceUID =  '1.3.6.1.4.1.9590.100.1.1.124313977412360175234271287472804872093'
+    ds.SeriesInstanceUID = '1.3.6.1.4.1.9590.100.1.1.369231118011061003403421859172643143649'
+    ds.SOPInstanceUID =    '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
+    ds.SOPClassUID = 'Secondary Capture Image Storage'
+    ds.SecondaryCaptureDeviceManufctur = 'Python 2.7.3'
+
+    ## These are the necessary imaging components of the FileDataset object.
+    ds.SamplesPerPixel = 1
+    ds.PhotometricInterpretation = "MONOCHROME2"
+    ds.PixelRepresentation = 0
+    ds.HighBit = 15
+    ds.BitsStored = 16
+    ds.BitsAllocated = 16
+    ds.SmallestImagePixelValue = '\\x00\\x00'
+    ds.LargestImagePixelValue = '\\xff\\xff'
+    ds.Columns = pixel_array.shape[0]
+    ds.Rows = pixel_array.shape[1]
+    if pixel_array.dtype != np.uint16:
+         pixel_array = pixel_array.astype(np.uint16)
+    ds.PixelData = pixel_array.tostring()
+
+    ds.save_as(filename)
+    return
+
+
+
+
 def get_line(start, end):
     """Bresenham's Line Algorithm
     Produces a list of tuples from start and end
@@ -55,6 +106,9 @@ def get_line(start, end):
     if swapped:
         points.reverse()
     return points
+
+
+
 """co trzecia poczawszy od 0 potem 1 potem 2 pozycji"""
 def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
     n_odbiornikoww
@@ -74,13 +128,65 @@ def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
         tab = []
     return tab2
 
+def splot(image,height):
+    im = []
+    ilosc = height
+    wynik = []
+
+    for i in range(ilosc):
+        wynik.append(0)
+
+    maska = []
+    for j in range(0,(ilosc * 2 - 1)):
+        maska.append(0)
+
+    suma_wag = 1;
+
+    for i in range(0,(ilosc * 2 - 1)):
+        j = i-ilosc + 1
+        if(j%2 == 0):
+            maska[i] = 0
+        else:
+            maska[i] = (-4/(np.pi*np.pi*j*j))
+
+        suma_wag = suma_wag + maska[i]
+
+    maska[ilosc - 1] = 1
+    start = 0
+    p = 0
+
+    while(start < 2*np.pi):
+        for i in range(0,ilosc):
+            suma = 0
+            for j in range(0,(ilosc*2 -1)):
+                odl_maska = ilosc -1 -j
+                k = i - odl_maska
+                if((k>=0) and (k<ilosc)):
+                    suma = suma + image[p][k] * maska[-odl_maska+ilosc-1]
+            wynik[i] = suma/suma_wag
+        im.append(wynik)
+        for i in range(ilosc):
+            wynik[i] = 0
+        p = p + 1
+        start  = start + (2*np.pi/ilosc)
+    return im
+
+def blad(image1,image2,height):
+    suma = 0
+    for i in range(0,height):
+        for j in range(0,height):
+           suma = suma + pow((image1.getpixel((i,j)) - image2[i][j]),2)
+    roz = (suma/(height*height))
+    return roz
+
+
 img = Image.open('obraz.png').convert('L')
 
 start = 0
 
 alfa = 2*np.pi/180
-beta = np.pi/6
-n_odbiornikow = 50
+beta = np.pi
+n_odbiornikow = 100
 height, width = img.size
 x0 = width/2
 y0 = height/2
@@ -98,7 +204,7 @@ tab_list = []
 list_of_nadajnik = []
 
 
-while (start < 2*np.pi):
+while (start < 2*np.pi - (alfa / 2)):
     """nadajnik"""
     x1 = x0 + r* np.cos(start)
     y1 = y0 + r* np.sin(start)
@@ -124,14 +230,6 @@ print(len(list_of_nadajnik))
 
 tab_pixel = []
 tab_pixel = sumowanie_pixel_proste(list_of_nadajnik,img,n_odbiornikow)
-"""
-w, h = n_nadajnikow, n_odbiornikow;
-Matrix = [[0 for x in range(w)] for y in range(h)]
-
-matrix = {}
-for i in range(0,n_nadajnikow):
-    for j in range(0,n_odbiornikow):
-    matrix[i,j] = tab_pixel[i][j]"""
 
 ax1 = fig.add_subplot(1, 3, 2)
 
@@ -139,6 +237,106 @@ ax1.imshow(tab_pixel, cmap=plt.get_cmap('gray'), vmin=0, vmax=1, aspect='auto')
 
 
 ax1=fig.add_subplot(1,3,3)
+
+
+
+
+
+"""filtrowanie maska suma wazona z z wierszmi sinogramu, jak wychodzi to dodac zera i podzielic przez sume wag"""
+
+# filtr = []
+# for i in range(width):
+#     row = []
+#     for j in range(height):
+#         row.append(0)
+#     filtr.append(row)
+#
+# filtr = splot(tab_pixel,n_odbiornikow)
+# mask = [0.5,1,2,10,10,100.5,1,2,10,10,10,2,1,0.5,2,1,0.5]
+#
+# l_mask = len(mask)
+#
+# j = (len(mask)//2)
+# summ = 0
+#
+# for k in range(0,l_mask):
+#     summ = summ + mask[k]
+#
+# head=False
+# head_ile = 0
+# tail=False
+# tail_ile = 0
+#
+# for val_nadajnik in tab_pixel:
+#     for i in range(0,n_odbiornikow):
+#         if((i>=j) and ((n_odbiornikow-1)-i)>=j):
+#             skladniki = 0
+#             k = 0
+#             for j in range((i-j),i+j):
+#                 skladniki = val_nadajnik[j]*mask[k]
+#                 k = k + 1
+#             val_nadajnik[i] = skladniki/summ
+#         else:
+#             break
+
+        # while(i<j):
+        #     sum[i]=0
+        #     i = i+1
+        #     j=0
+        #     while(j<l_mask):
+        #         sum[i]=val[i-j]*mask[j]
+        # for (i = 0; i < j; i++ ):
+        #      y[i] = 0;
+        # for (j = 0; j < kernelCount; j++ ):
+        #      y[i] += x[i - j] * h[j];
+        #
+        #
+        # if(l_mask>n_odbiornikow):
+        #
+        # if(i<j):
+        #     while(i!=i+)
+        #     sum=
+        #
+        # val_nadajnik[i] = val_nadajnik[i]*mask[j]
+
+
+#         """wyjezdza przodem"""
+#         sum = 0
+#         if(i<j):
+#             head=True
+#             head_ile = j-i
+#         else:
+#             head=False
+#         """wylezdza tylem"""
+#         if((n_odbiornikow-i)<j):
+#            tail=False
+#         else:
+#             tail=True
+#             tail_ile=j-(n_odbiornikow-i)
+#             """co jesli tylko przodem, tylko tylem, przodem i tylem"""
+#         if(head):
+#             while((l_mask-head_ile)!=-1):
+#                 sum = sum + val_nadajnik[l_mask-head_ile-1]*mask[l_mask-head_ile-1]
+#                 sum_mask=mask[l_mask-head_ile-1]
+#                 head_ile=head_ile+1
+#             val_nadajnik[i]=sum/sum_mask
+#         elif(tail):
+#             while ((l_mask - tail_ile) != -1):
+#                 sum = sum + val_nadajnik[i+l_mask - head_ile - 1] * mask[l_mask - head_ile - 1]
+#                 sum_mask = mask[l_mask - head_ile - 1]
+#                 head_ile = head_ile + 1
+#             val_nadajnik[i] = sum / sum_mask
+#
+#         elif(head and tail):
+#
+#         else:
+#
+#  val_nadajnik[i] = (val_nadajnik[i]*mask[j] + val_nadajnik[i+1]*mask[j+1] + val_nadajnik[i+2]*mask[j+2])/sum3
+# val_nadajnik[i] = (val_nadajnik[i-1] * mask[j-1] + val_nadajnik[i] * mask[j] + val_nadajnik[i + 1] * mask[j + 1]) / sum4
+
+
+
+
 
 mat = []
 for i in range(width):
@@ -155,15 +353,40 @@ for lines_nadajnik in list_of_nadajnik:
     for line in lines_nadajnik:
         for point in line:
             x,y = point
-            mat[x][y] = mat[x][y] + wartosci_nadajnika[j]
+            mat[y][x] = mat[y][x] + wartosci_nadajnika[j]
         j = j + 1
     j = 0
     i = i + 1
-    if (i == 4):
+    if (i == n_nadajnikow):
         break
     wartosci_nadajnika = tab_pixel[i]
 
-ax1.imshow(mat, cmap=plt.get_cmap('gray'))
 
+max = 0
+for i in range(width):
+    for j in range(height):
+        if mat[i][j] > max:
+            max = mat[i][j]
+
+for i in range(width):
+    for j in range(height):
+        mat[i][j] = mat[i][j] / max
+
+
+# mat_splot = []
+#
+# mat_splot = splot(mat,height)
+
+ax1.imshow(mat, cmap=plt.get_cmap('gray'), vmax=1,vmin=0)
+
+# a = np.zeros((height,width))
+#
+# for i in range(width):
+#     for j in range(height):
+#         a[i][j] = mat[i][j]
+
+# write_dicom(a,"dicom.dcm")
+
+war_blad = blad(img,mat,height)
+print(war_blad)
 plt.show()
-
