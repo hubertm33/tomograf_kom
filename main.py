@@ -12,6 +12,8 @@ from dicom.dataset import Dataset, FileDataset
 import numpy as np
 import datetime, time
 
+import threading
+
 def write_dicom(pixel_array,filename):
     """
     INPUTS:
@@ -26,7 +28,7 @@ def write_dicom(pixel_array,filename):
     file_meta.MediaStorageSOPClassUID = 'Secondary Capture Image Storage'
     file_meta.MediaStorageSOPInstanceUID = '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
     file_meta.ImplementationClassUID = '1.3.6.1.4.1.9590.100.1.0.100.4.0'
-    ds = FileDataset(filename, {},file_meta = file_meta,preamble="\0"*128)
+    ds = FileDataset(filename, {},file_meta = file_meta)
     ds.Modality = 'WSD'
     ds.ContentDate = str(datetime.date.today()).replace('-','')
     ds.ContentTime = str(time.time()) #milliseconds since the epoch
@@ -34,7 +36,7 @@ def write_dicom(pixel_array,filename):
     ds.SeriesInstanceUID = '1.3.6.1.4.1.9590.100.1.1.369231118011061003403421859172643143649'
     ds.SOPInstanceUID =    '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
     ds.SOPClassUID = 'Secondary Capture Image Storage'
-    ds.SecondaryCaptureDeviceManufctur = 'Python 2.7.3'
+    ds.SecondaryCaptureDeviceManufctur = 'Python 3.4'
 
     ## These are the necessary imaging components of the FileDataset object.
     ds.SamplesPerPixel = 1
@@ -130,14 +132,21 @@ def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
 
 def splot(image,height):
     im = []
+
+    for i in range(width):
+        row = []
+        for j in range(height):
+            row.append(0)
+        im.append(row)
+
     ilosc = height
     wynik = []
 
-    for i in range(ilosc):
+    for i in range(0, ilosc):
         wynik.append(0)
 
     maska = []
-    for j in range(0,(ilosc * 2 - 1)):
+    for j in range(0, (ilosc * 2 - 1)):
         maska.append(0)
 
     suma_wag = 1;
@@ -148,8 +157,11 @@ def splot(image,height):
             maska[i] = 0
         else:
             maska[i] = (-4/(np.pi*np.pi*j*j))
-
         suma_wag = suma_wag + maska[i]
+
+    print(suma_wag)
+    if(suma_wag<0):
+        print("bladddddddd")
 
     maska[ilosc - 1] = 1
     start = 0
@@ -162,12 +174,13 @@ def splot(image,height):
                 odl_maska = ilosc -1 -j
                 k = i - odl_maska
                 if((k>=0) and (k<ilosc)):
-                    suma = suma + image[p][k] * maska[-odl_maska+ilosc-1]
-            wynik[i] = suma/suma_wag
-        im.append(wynik)
-        for i in range(ilosc):
+                    suma = suma + image[p][k] * maska[ilosc-odl_maska-1]
+            im[p][i] = suma/suma_wag
+        for i in range(0,ilosc):
             wynik[i] = 0
         p = p + 1
+        if(p==ilosc):
+            break
         start  = start + (2*np.pi/ilosc)
     return im
 
@@ -210,15 +223,15 @@ while (start < 2*np.pi - (alfa / 2)):
     y1 = y0 + r* np.sin(start)
 
 
-    c1 = plt.Circle((x1,y1), 5, color=(1, 0, 0))
-    fig.add_subplot(131).add_artist(c1)
+    # c1 = plt.Circle((x1,y1), 5, color=(1, 0, 0))
+    # fig.add_subplot(131).add_artist(c1)
     """odbiornik"""
 
     for i in range(0,n_odbiornikow):
         x2 =  (x0 + r * np.cos((np.pi - (beta/2)) + start +((beta/(n_odbiornikow-1))*i)))
         y2 =  (y0 + r * np.sin((np.pi - (beta/2)) + start +((beta/(n_odbiornikow-1))*i)))
-        c2 = plt.Circle((x2, y2), 5, color=(0, 1, 0))
-        fig.add_subplot(131).add_artist(c2)
+        # c2 = plt.Circle((x2, y2), 5, color=(0, 1, 0))
+        # fig.add_subplot(131).add_artist(c2)
         line = get_line((x1,y1),(x2,y2))
         tab_list.append(line)
     start+=alfa
@@ -237,106 +250,6 @@ ax1.imshow(tab_pixel, cmap=plt.get_cmap('gray'), vmin=0, vmax=1, aspect='auto')
 
 
 ax1=fig.add_subplot(1,3,3)
-
-
-
-
-
-"""filtrowanie maska suma wazona z z wierszmi sinogramu, jak wychodzi to dodac zera i podzielic przez sume wag"""
-
-# filtr = []
-# for i in range(width):
-#     row = []
-#     for j in range(height):
-#         row.append(0)
-#     filtr.append(row)
-#
-# filtr = splot(tab_pixel,n_odbiornikow)
-# mask = [0.5,1,2,10,10,100.5,1,2,10,10,10,2,1,0.5,2,1,0.5]
-#
-# l_mask = len(mask)
-#
-# j = (len(mask)//2)
-# summ = 0
-#
-# for k in range(0,l_mask):
-#     summ = summ + mask[k]
-#
-# head=False
-# head_ile = 0
-# tail=False
-# tail_ile = 0
-#
-# for val_nadajnik in tab_pixel:
-#     for i in range(0,n_odbiornikow):
-#         if((i>=j) and ((n_odbiornikow-1)-i)>=j):
-#             skladniki = 0
-#             k = 0
-#             for j in range((i-j),i+j):
-#                 skladniki = val_nadajnik[j]*mask[k]
-#                 k = k + 1
-#             val_nadajnik[i] = skladniki/summ
-#         else:
-#             break
-
-        # while(i<j):
-        #     sum[i]=0
-        #     i = i+1
-        #     j=0
-        #     while(j<l_mask):
-        #         sum[i]=val[i-j]*mask[j]
-        # for (i = 0; i < j; i++ ):
-        #      y[i] = 0;
-        # for (j = 0; j < kernelCount; j++ ):
-        #      y[i] += x[i - j] * h[j];
-        #
-        #
-        # if(l_mask>n_odbiornikow):
-        #
-        # if(i<j):
-        #     while(i!=i+)
-        #     sum=
-        #
-        # val_nadajnik[i] = val_nadajnik[i]*mask[j]
-
-
-#         """wyjezdza przodem"""
-#         sum = 0
-#         if(i<j):
-#             head=True
-#             head_ile = j-i
-#         else:
-#             head=False
-#         """wylezdza tylem"""
-#         if((n_odbiornikow-i)<j):
-#            tail=False
-#         else:
-#             tail=True
-#             tail_ile=j-(n_odbiornikow-i)
-#             """co jesli tylko przodem, tylko tylem, przodem i tylem"""
-#         if(head):
-#             while((l_mask-head_ile)!=-1):
-#                 sum = sum + val_nadajnik[l_mask-head_ile-1]*mask[l_mask-head_ile-1]
-#                 sum_mask=mask[l_mask-head_ile-1]
-#                 head_ile=head_ile+1
-#             val_nadajnik[i]=sum/sum_mask
-#         elif(tail):
-#             while ((l_mask - tail_ile) != -1):
-#                 sum = sum + val_nadajnik[i+l_mask - head_ile - 1] * mask[l_mask - head_ile - 1]
-#                 sum_mask = mask[l_mask - head_ile - 1]
-#                 head_ile = head_ile + 1
-#             val_nadajnik[i] = sum / sum_mask
-#
-#         elif(head and tail):
-#
-#         else:
-#
-#  val_nadajnik[i] = (val_nadajnik[i]*mask[j] + val_nadajnik[i+1]*mask[j+1] + val_nadajnik[i+2]*mask[j+2])/sum3
-# val_nadajnik[i] = (val_nadajnik[i-1] * mask[j-1] + val_nadajnik[i] * mask[j] + val_nadajnik[i + 1] * mask[j + 1]) / sum4
-
-
-
-
 
 mat = []
 for i in range(width):
@@ -373,20 +286,41 @@ for i in range(width):
         mat[i][j] = mat[i][j] / max
 
 
-# mat_splot = []
-#
-# mat_splot = splot(mat,height)
+mat_splot = []
+for i in range(width):
+    row = []
+    for j in range(height):
+        row.append(0)
+    mat_splot.append(row)
 
-ax1.imshow(mat, cmap=plt.get_cmap('gray'), vmax=1,vmin=0)
+mat_splot = splot(mat,height)
 
-# a = np.zeros((height,width))
-#
-# for i in range(width):
-#     for j in range(height):
-#         a[i][j] = mat[i][j]
 
-# write_dicom(a,"dicom.dcm")
+maxx = 0
+for i in range(width):
+     for j in range(height):
+         if mat_splot[i][j] > maxx:
+             maxx = mat_splot[i][j]
+print(maxx)
+for i in range(width):
+     for j in range(height):
+         mat_splot[i][j] = mat_splot[i][j]/maxx
 
-war_blad = blad(img,mat,height)
+
+ax1.imshow(mat_splot, cmap=plt.get_cmap('gray'),vmin = 0,vmax = 1)
+
+a = np.zeros((height,width))
+
+for i in range(width):
+    for j in range(height):
+        a[i][j] = mat_splot[i][j]
+
+write_dicom(a,"pretty.dcm")
+
+for i in range(width):
+    for j in range(height):
+        mat_splot[i][j] = mat_splot[i][j]*255
+
+war_blad = blad(img,mat_splot,height)
 print(war_blad)
 plt.show()
