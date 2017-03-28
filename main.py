@@ -16,38 +16,29 @@ import datetime, time
 import threading
 
 def write_dicom(pixel_array,filename):
-    """
-    INPUTS:
-    pixel_array: 2D numpy ndarray.  If pixel_array is larger than 2D, errors.
-    filename: string name for the output file.
-    """
 
-    ## This code block was taken from the output of a MATLAB secondary
-    ## capture.  I do not know what the long dotted UIDs mean, but
-    ## this code works.
+
     file_meta = Dataset()
-    file_meta.MediaStorageSOPClassUID = 'Secondary Capture Image Storage'
-    file_meta.MediaStorageSOPInstanceUID = '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
-    file_meta.ImplementationClassUID = '1.3.6.1.4.1.9590.100.1.0.100.4.0'
+    # file_meta.MediaStorageSOPClassUID = 'Secondary Capture Image Storage'
+    # file_meta.MediaStorageSOPInstanceUID = '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
+    # file_meta.ImplementationClassUID = '1.3.6.1.4.1.9590.100.1.0.100.4.0'
+
+
     ds = FileDataset(filename, {},file_meta = file_meta)
-    ds.Modality = 'WSD'
-    ds.ContentDate = str(datetime.date.today()).replace('-','')
-    ds.ContentTime = str(time.time()) #milliseconds since the epoch
-    ds.StudyInstanceUID =  '1.3.6.1.4.1.9590.100.1.1.124313977412360175234271287472804872093'
-    ds.SeriesInstanceUID = '1.3.6.1.4.1.9590.100.1.1.369231118011061003403421859172643143649'
-    ds.SOPInstanceUID =    '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
-    ds.SOPClassUID = 'Secondary Capture Image Storage'
-    ds.SecondaryCaptureDeviceManufctur = 'Python 3.4'
+    # ds.Modality = 'WSD'
+    # ds.ContentDate = str(datetime.date.today()).replace('-','')
+    # ds.ContentTime = str(time.time()) #milliseconds since the epoch
+    # ds.StudyInstanceUID =  '1.3.6.1.4.1.9590.100.1.1.124313977412360175234271287472804872093'
+    # ds.SeriesInstanceUID = '1.3.6.1.4.1.9590.100.1.1.369231118011061003403421859172643143649'
+    # ds.SOPInstanceUID =    '1.3.6.1.4.1.9590.100.1.1.111165684411017669021768385720736873780'
+    # ds.SOPClassUID = 'Secondary Capture Image Storage'
+    # ds.SecondaryCaptureDeviceManufctur = 'Python 3.4'
 
     ## These are the necessary imaging components of the FileDataset object.
     ds.SamplesPerPixel = 1
     ds.PhotometricInterpretation = "MONOCHROME2"
-    ds.PixelRepresentation = 0
-    ds.HighBit = 15
-    ds.BitsStored = 16
-    ds.BitsAllocated = 16
-    ds.SmallestImagePixelValue = '\\x00\\x00'
-    ds.LargestImagePixelValue = '\\xff\\xff'
+    ds.SmallestImagePixelValue = bytes(0)
+    ds.LargestImagePixelValue = bytes(255)
     ds.Columns = pixel_array.shape[0]
     ds.Rows = pixel_array.shape[1]
     if pixel_array.dtype != np.uint16:
@@ -131,16 +122,16 @@ def sumowanie_pixel_proste(listoflist,img,n_odbiornikoww):
         tab = []
     return tab2
 
-def splot(image,height):
+def splot(image,n_odbiornikow,n_nadajnikow):
     im = []
 
-    for i in range(width):
+    for i in range(n_nadajnikow):
         row = []
-        for j in range(height):
+        for j in range(n_odbiornikow):
             row.append(0)
         im.append(row)
 
-    ilosc = height
+    ilosc = n_odbiornikow
     wynik = []
 
     for i in range(0, ilosc):
@@ -177,12 +168,10 @@ def splot(image,height):
                 if((k>=0) and (k<ilosc)):
                     suma = suma + image[p][k] * maska[ilosc-odl_maska-1]
             im[p][i] = suma/suma_wag
-        for i in range(0,ilosc):
-            wynik[i] = 0
         p = p + 1
-        if(p==ilosc):
+        if(p==n_nadajnikow):
             break
-        start  = start + (2*np.pi/ilosc)
+        start  = start + (2*np.pi/n_nadajnikow)
     return im
 
 def blad(image1,image2,height):
@@ -194,13 +183,13 @@ def blad(image1,image2,height):
     return roz
 
 
-img = Image.open('obraz.png').convert('L')
+img = Image.open('aaa.png').convert('L')
 
 start = 0
 
-alfa = 2*np.pi/180
+alfa = 2*np.pi/36
 beta = np.pi
-n_odbiornikow = 100
+n_odbiornikow = 10
 height, width = img.size
 x0 = width/2
 y0 = height/2
@@ -213,22 +202,6 @@ ax1 = fig.add_subplot(1, 3, 1)
 
 ax1.imshow(img,cmap=plt.cm.gray)
 
-"""slidery"""
-d_nadajnik = Slider(ax1, 'Obrot Nadajnikow', 1,2*np.pi, valinit=1, step=1)
-d_odbiornikow = Slider(ax1, 'Rozpietosc odbiornikow', 1,np.pi, valinit=1, step=1)
-n_odbiornik = Slider(ax1, 'Ile odbiornikow', 1,50, valinit=1, step=1)
-
-def update(val,alfa):
-    alfa = d_nadajnik.val
-
-d_nadajnik.on_changed(update(alfa))
-
-def update1(val,beta):
-    beta = d_odbiornikow.val
-
-d_odbiornikow.on_changed(update1(beta))
-
-""""----"""
 
 n_nadajnikow = 0
 tab_list = []
@@ -241,8 +214,8 @@ while (start < 2*np.pi - (alfa / 2)):
     y1 = y0 + r* np.sin(start)
 
 
-    # c1 = plt.Circle((x1,y1), 5, color=(1, 0, 0))
-    # fig.add_subplot(131).add_artist(c1)
+    c1 = plt.Circle((x1,y1), 1, color=(1, 0, 0))
+    fig.add_subplot(131).add_artist(c1)
     """odbiornik"""
 
     for i in range(0,n_odbiornikow):
@@ -269,6 +242,10 @@ ax1.imshow(tab_pixel, cmap=plt.get_cmap('gray'), vmin=0, vmax=1, aspect='auto')
 
 ax1=fig.add_subplot(1,3,3)
 
+mat_splot = splot(tab_pixel,n_odbiornikow,n_nadajnikow)
+
+
+
 mat = []
 for i in range(width):
     row = []
@@ -278,7 +255,7 @@ for i in range(width):
 
 i = 0
 j = 0
-wartosci_nadajnika = tab_pixel[i]
+wartosci_nadajnika = mat_splot[i]
 print(i)
 for lines_nadajnik in list_of_nadajnik:
     for line in lines_nadajnik:
@@ -290,7 +267,7 @@ for lines_nadajnik in list_of_nadajnik:
     i = i + 1
     if (i == n_nadajnikow):
         break
-    wartosci_nadajnika = tab_pixel[i]
+    wartosci_nadajnika = mat_splot[i]
 
 
 max = 0
@@ -304,41 +281,27 @@ for i in range(width):
         mat[i][j] = mat[i][j] / max
 
 
-mat_splot = []
-for i in range(width):
-    row = []
-    for j in range(height):
-        row.append(0)
-    mat_splot.append(row)
-
-mat_splot = splot(mat,height)
 
 
-maxx = 0
-for i in range(width):
-     for j in range(height):
-         if mat_splot[i][j] > maxx:
-             maxx = mat_splot[i][j]
-print(maxx)
-for i in range(width):
-     for j in range(height):
-         mat_splot[i][j] = mat_splot[i][j]/maxx
 
 
-ax1.imshow(mat_splot, cmap=plt.get_cmap('gray'),vmin = 0,vmax = 1)
+
+
+ax1.imshow(mat, cmap=plt.get_cmap('gray'),vmin = 0,vmax = 1)
+
+
 
 a = np.zeros((height,width))
+for i in range(width):
+    for j in range(height):
+        a[i][j] = mat[i][j] * 255
+
+write_dicom(a,"abc.dcm")
 
 for i in range(width):
     for j in range(height):
-        a[i][j] = mat_splot[i][j]
+        mat[i][j] = mat[i][j]*255
 
-write_dicom(a,"pretty.dcm")
-
-for i in range(width):
-    for j in range(height):
-        mat_splot[i][j] = mat_splot[i][j]*255
-
-war_blad = blad(img,mat_splot,height)
+war_blad = blad(img,mat,height)
 print(war_blad)
 plt.show()
